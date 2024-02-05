@@ -5,6 +5,7 @@ uniform vec2 uResolution;
 uniform float uTime;
 uniform bool uRemapped;
 uniform vec3 uSpherePosition;
+uniform float uSphereRadius;
 uniform float uBlendFactor;
 uniform sampler2D uTexture;
 varying vec2 vUv;
@@ -39,7 +40,7 @@ float smin(float a, float b, float k) {
 }
 
 float getDist(vec3 p) {
-    float dSphere = sphere(p, 1.4, uSpherePosition);
+    float dSphere = sphere(p, uSphereRadius, uSpherePosition);
     float dBox =  sdBox(p, vec3(1.0));
     float d = smoothMin(dSphere , dBox, uBlendFactor);
     return d;
@@ -79,7 +80,6 @@ float map(vec3 p){
     float dist =  sdSphere(p - spherePosition, 2.);
     return dist;
 }
-
 
 void main(){
     vec2 uv = gl_FragCoord.xy / uResolution.xy;

@@ -1,21 +1,10 @@
-import {
-  Box,
-  GizmoHelper,
-  GizmoViewcube,
-  GizmoViewport,
-  OrbitControls,
-  PivotControls,
-  TransformControls,
-  Wireframe,
-  shaderMaterial,
-  useTexture,
-} from '@react-three/drei';
+import { OrbitControls, TransformControls, shaderMaterial, useTexture } from '@react-three/drei';
 import { extend, useFrame } from '@react-three/fiber';
-import { Color, DoubleSide, Texture, Vector3, BoxGeometry, Matrix4, BackSide } from 'three';
 import { useControls } from 'leva';
-import { useMemo, useRef, useState } from 'react';
-import vertexShader from './shaders/vertexShader.glsl';
+import { useRef } from 'react';
+import { BackSide, Color, MathUtils, Texture } from 'three';
 import fragmentShader from './shaders/fragmentShader.glsl';
+import vertexShader from './shaders/vertexShader.glsl';
 
 const CustomMaterial = shaderMaterial(
   {
@@ -27,12 +16,15 @@ const CustomMaterial = shaderMaterial(
     uRemapped: true,
     uSpherePosition: { x: 0, y: 0, z: 0 },
     uBlendFactor: 0.5,
+    uSphereRadius: 1.5,
   },
   vertexShader,
   fragmentShader
 );
 
 extend({ CustomMaterial });
+
+CustomMaterial.key = MathUtils.generateUUID();
 
 const mapCoordinates = (coords) => {
   const x = coords.x;
@@ -44,38 +36,48 @@ const mapCoordinates = (coords) => {
 function App() {
   const shaderRef = useRef();
   const sphereRef = useRef();
+  const wireframeRef = useRef();
   const texture = useTexture(
     'https://images.unsplash.com/photo-1706349067986-433baf49d558?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
   );
 
   const data = useControls({
-    speed: { value: 0, min: 0, max: 10 },
-    'Blend Factor': { value: 0.5, min: 0.1, max: 5, step: 0.01 },
+    'Blend Factor': { value: 0.5, min: 0.1, max: 6, step: 0.01 },
+    uSphereRadius: { value: 1, min: 0.1, max: 15, step: 0.01 },
     Remapped: { value: true },
+    wireframe: { value: false },
   });
 
   useFrame((state) => {
     shaderRef.current.material.uniforms.uTime.value = state.clock.getElapsedTime();
     shaderRef.current.material.uniforms.uRemapped.value = data.Remapped;
     shaderRef.current.material.uniforms.uBlendFactor.value = data['Blend Factor'];
+    shaderRef.current.material.uniforms.uSphereRadius.value = data.uSphereRadius;
     const spherePosition = sphereRef.current.object.getWorldPosition(sphereRef.current.object.position);
     shaderRef.current.material.uniforms.uSpherePosition.value = mapCoordinates(spherePosition);
+    wireframeRef.current.geometry = shaderRef.current.geometry;
+
+    wireframeRef.current.visible = data.wireframe ? true : false;
   });
 
   return (
     <>
       <mesh ref={shaderRef} rotation-x={Math.PI / 2}>
         <boxGeometry args={[20, 20, 20]} />
-        <customMaterial side={BackSide} uTexture={texture} />
+        <customMaterial side={BackSide} uTexture={texture} key={CustomMaterial.key} />
       </mesh>
 
-      <TransformControls mode='translate' ref={sphereRef}>
-        <mesh>
+      <lineSegments ref={wireframeRef}>
+        <edgesGeometry />
+        <lineBasicMaterial color='white' />
+      </lineSegments>
+
+      <TransformControls mode='translate' ref={sphereRef} position={[0, 1, 0]}>
+        <mesh position={[0, 1, 0]}>
           <boxGeometry />
           <meshBasicMaterial visible={false} />
         </mesh>
       </TransformControls>
-
       <ambientLight intensity={5} />
       <OrbitControls makeDefault />
       <color args={['#363636']} attach='background' />
